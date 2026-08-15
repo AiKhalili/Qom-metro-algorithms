@@ -13,6 +13,7 @@ class Graph:
     def __init__(self):
         self._adjacency_list = {}
         self._connection_count = 0
+        self._connections = []
 
     # station management
 
@@ -65,11 +66,27 @@ class Graph:
 
         self._connection_count += 1
 
+        self._connections.append(
+            {
+                "from": station1,
+                "to": station2,
+                "distance": distance,
+                "time": time,
+                "weight": weight if weight is not None else distance,
+                "directed": directed,
+                "capacity": capacity,
+            }
+        )
+
     def get_neighbors(self, station):
         """Return the outgoing edges of a station."""
         if station not in self._adjacency_list:
             raise ValueError(f"Station '{station}' does not exist.")
         return self._adjacency_list[station]
+
+    def get_all_connections(self):
+        """Return a flat list of every connection added to the graph."""
+        return list(self._connections)
 
     def number_of_connections(self):
         """Return the number of logical connections."""
