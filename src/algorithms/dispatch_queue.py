@@ -1,7 +1,7 @@
 import heapq
 import itertools
 
-from src.data_structures.train import Train
+from data_structures.train import Train
 
 
 class DispatchQueue:

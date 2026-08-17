@@ -1,7 +1,7 @@
 import heapq
 import random
 
-from src.data_structures.passenger import Passenger
+from data_structures.passenger import Passenger
 
 
 class PassengerArrivalSimulation:

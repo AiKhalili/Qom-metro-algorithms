@@ -1,6 +1,6 @@
 from collections import Counter
 
-from src.data_structures.trip_record import TripRecord
+from data_structures.trip_record import TripRecord
 
 
 class OperationalAnalytics:
