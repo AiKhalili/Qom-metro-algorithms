@@ -44,6 +44,7 @@ Per the project brief, the engineering team must design and implement the full a
 Qom-metro-algorithms/
 ├── main.py                          # Entry point; interactive 5-round menu
 ├── pytest.ini                       # pytest config (pythonpath = src)
+├── requirements.txt                  # Project and test dependencies
 ├── src/
 │   ├── graph/
 │   │   ├── edge.py                  # Edge class: destination, distance, time, weight, capacity
@@ -92,14 +93,12 @@ Qom-metro-algorithms/
 ### Prerequisites
 
 - Python **3.10+**
-- No mandatory third-party dependencies — every algorithm is built on the Python standard library (`heapq`, `collections`, `itertools`, etc.).
+The core application uses only the Python standard library. The optional dependencies `arabic-reshaper` and `python-bidi` provide correct RTL rendering of Persian station names in the terminal. `pytest` is required only for running the test suite.
 
-### Optional dependency (correct RTL rendering of Persian station names)
-
-`main.py` attempts to reshape Persian station names with `arabic_reshaper` and `python-bidi` for correct terminal display. These are **optional**; if missing, the program still runs fine (terminal output for Persian text may just not be visually reordered on some terminals).
+Install the project dependencies with:
 
 ```bash
-pip install arabic-reshaper python-bidi
+pip install -r requirements.txt
 ```
 
 ### Run the application
@@ -227,7 +226,7 @@ All four capabilities operate on the same shared entities (`Train`, `TripRecord`
 | T4.2 | Peak-hour capacity analysis (maximize passenger flow) | Max-Flow (Edmonds-Karp; Ford-Fulkerson with BFS) | `algorithms/max_flow.py`, `demos/max_flow_demo.py` |
 | T4.3 | Identify critical stations (articulation points and bridges) | DFS via Tarjan's low-link method | `algorithms/critical_stations.py` |
 | T4.4 | Optimal relief-team placement (bonus, NP-Hard) | Greedy Dominating Set approximation + exact search for comparison | `algorithms/relief_deployment.py` |
-| T4.5/T4.6 | Typo-tolerant station name search | Levenshtein edit distance | `algorithms/fuzzy_search.py` |
+| T4.5 | Typo-tolerant station name search | Levenshtein edit distance | `algorithms/fuzzy_search.py` |
 
 - **T4.3** outputs the exact set of articulation points and bridges.
 - **T4.4** first establishes that the problem is equivalent to **Dominating Set** and is `NP-Hard`; a greedy approximation is then implemented and compared against an exact brute-force solution, with the resulting **approximation ratio** reported.
@@ -284,7 +283,6 @@ Current test coverage focuses on Round 3's four core modules (`pytest`, configur
 Run the full suite:
 
 ```bash
-pip install pytest
 pytest
 ```
 ---
