@@ -1,0 +1,3 @@
+arabic-reshaper>=3.0.0   # optional: RTL shaping for Persian station names
+python-bidi>=0.4.2       # optional: RTL shaping for Persian station names
+pytest>=7.4.0            # for running tests/
