@@ -1,4 +1,6 @@
 from .union_find import UnionFind
- 
-__all__ = ["UnionFind"]
- 
+from .train import Train
+from .trip_record import TripRecord
+from .passenger import Passenger
+
+__all__ = ["UnionFind", "Train", "TripRecord", "Passenger"]
