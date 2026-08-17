@@ -11,11 +11,6 @@ for path in (PROJECT_ROOT, SRC_DIR):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-# --- Terminal RTL fix -----------------------------------------------------
-# This terminal renders Persian/Arabic text as disconnected, reversed
-# letters (no shaping, no bidi reordering). We patch builtins.print/input
-# globally (not just in this file) so text coming from imported demo
-# modules (e.g. operations_demo.py, max_flow_demo.py) is fixed too.
 try:
     import arabic_reshaper
     from bidi.algorithm import get_display
@@ -23,6 +18,21 @@ try:
     _BIDI_AVAILABLE = True
 except ImportError:
     _BIDI_AVAILABLE = False
+
+try:
+    import termios
+    import tty
+
+    _POSIX = True
+except ImportError:
+    _POSIX = False
+
+try:
+    import msvcrt
+
+    _WINDOWS = True
+except ImportError:
+    _WINDOWS = False
 
 _RTL_PATTERN = re.compile(r"[\u0600-\u06FF\u200C\u200F]")
 _builtin_print = builtins.print
@@ -40,8 +50,94 @@ def _patched_print(*args, **kwargs):
     _builtin_print(*fixed_args, **kwargs)
 
 
+def _redraw_line(prompt, buffer):
+    """Clear the current terminal line and redraw prompt+typed text, shaped."""
+    text = "".join(buffer)
+    fixed = _fix_rtl(prompt + text)
+    # \r -> back to column 0, \033[K -> clear from cursor to end of line
+    sys.stdout.write("\r\033[K" + fixed)
+    sys.stdout.flush()
+
+
+def _posix_raw_input(prompt):
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    new_settings = termios.tcgetattr(fd)
+    # Turn off canonical mode (line buffering) AND local echo, so nothing
+    # reaches the screen except what we explicitly write ourselves.
+    new_settings[3] = new_settings[3] & ~(termios.ICANON | termios.ECHO)
+    buffer = []
+    try:
+        termios.tcsetattr(fd, termios.TCSANOW, new_settings)
+        sys.stdout.write(_fix_rtl(prompt) + "\n")
+        sys.stdout.flush()
+        _redraw_line("", buffer)
+        while True:
+            ch = sys.stdin.read(1)
+            if ch in ("\r", "\n"):
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                break
+            elif ch in ("\x7f", "\b"):  # Backspace / Delete
+                if buffer:
+                    buffer.pop()
+                    _redraw_line("", buffer)
+            elif ch == "\x03":  # Ctrl-C
+                sys.stdout.write("\n")
+                raise KeyboardInterrupt
+            elif ch == "\x04":  # Ctrl-D
+                if not buffer:
+                    sys.stdout.write("\n")
+                    raise EOFError
+            elif ch == "\x1b":  # start of an arrow-key/escape sequence: ignore it
+                sys.stdin.read(2)
+            else:
+                buffer.append(ch)
+                _redraw_line("", buffer)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return "".join(buffer)
+
+
+def _windows_raw_input(prompt):
+    buffer = []
+    sys.stdout.write(_fix_rtl(prompt) + "\n")
+    sys.stdout.flush()
+    _redraw_line("", buffer)
+    while True:
+        ch = msvcrt.getwch()
+        if ch in ("\r", "\n"):
+            print()
+            break
+        elif ch == "\x08":  # Backspace
+            if buffer:
+                buffer.pop()
+                _redraw_line("", buffer)
+        elif ch == "\x03":  # Ctrl-C
+            raise KeyboardInterrupt
+        elif ch in ("\x00", "\xe0"):  # arrow-key/function-key prefix: ignore
+            msvcrt.getwch()
+        else:
+            buffer.append(ch)
+            _redraw_line("", buffer)
+    return "".join(buffer)
+
+
 def _patched_input(prompt=""):
-    return _builtin_input(_fix_rtl(prompt))
+    # Only take over the terminal when we're actually attached to one and
+    # the platform is supported; otherwise fall back to the normal input()
+    # (e.g. when input is piped/redirected, or bidi libs aren't installed).
+    if _BIDI_AVAILABLE and sys.stdin.isatty() and sys.stdout.isatty():
+        try:
+            if _POSIX:
+                return _posix_raw_input(prompt)
+            elif _WINDOWS:
+                return _windows_raw_input(prompt)
+        except Exception:
+            pass  # fall through to the plain built-in input below
+    if prompt:
+        _builtin_print(_fix_rtl(prompt))
+    return _builtin_input()
 
 
 builtins.print = _patched_print
